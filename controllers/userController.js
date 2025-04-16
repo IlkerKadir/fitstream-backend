@@ -126,29 +126,41 @@ exports.updateTokens = async (req, res, next) => {
 exports.getUserSessions = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
-      .populate({
-        path: 'bookedSessions.session',
-        select: 'title trainer scheduledAt duration status',
-        populate: {
-          path: 'trainer',
-          select: 'firstName lastName'
-        }
-      });
+    .populate({
+      path: 'bookedSessions.session',
+      select: 'title trainer scheduledAt duration status participants tags category difficulty tokenCost', // Added missing fields
+      populate: {
+        path: 'trainer',
+        select: 'firstName lastName profilePicture'
+      }
+    });
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Format the response to be more user-friendly
-    const bookedSessions = user.bookedSessions.map(booking => ({
-      id: booking.session._id,
-      title: booking.session.title,
-      trainer: `${booking.session.trainer.firstName} ${booking.session.trainer.lastName}`,
-      scheduledAt: booking.session.scheduledAt,
-      duration: booking.session.duration,
-      status: booking.session.status,
-      bookedAt: booking.bookedAt
-    }));
+    const bookedSessions = user.bookedSessions.map(booking => {
+      const session = booking.session;
+      return {
+        id: session._id,
+        title: session.title,
+        trainer: {
+          firstName: session.trainer.firstName,
+          lastName: session.trainer.lastName,
+          profilePicture: session.trainer.profilePicture
+        },
+        scheduledAt: session.scheduledAt,
+        duration: session.duration,
+        status: session.status,
+        participants: session.participants || [],
+        tags: session.tags || [],
+        category: session.category,
+        difficulty: session.difficulty,
+        tokenCost: session.tokenCost,
+        bookedAt: booking.bookedAt
+      };
+    });
 
     res.json(bookedSessions);
   } catch (err) {
